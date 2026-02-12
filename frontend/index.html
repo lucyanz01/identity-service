@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoreAuth | Auth System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes gradient-bg {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .animate-gradient {
+            background: linear-gradient(-45deg, #020617, #0f172a, #26243f, #1e293b);
+            background-size: 400% 400%;
+            animation: gradient-bg 18s ease infinite;
+        }
+
+        .glass-card {
+            background: rgba(9, 17, 34, 0.7);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(248, 248, 248, 0.05);
+        }
+    </style>
+</head>
+<body class="animate-gradient min-h-screen flex items-center justify-center font-sans p-4 text-slate-200">
+
+    <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-sm transform transition-all hover:scale-[1.01]">
+        
+        <div class="text-center mb-8">
+            <h2 id="titulo" class="text-3xl font-black text-white tracking-tight">Bienvenido</h2>
+            <p id="subtitulo" class="text-slate-400 mt-2 text-sm">Ingresa a tu cuenta</p>
+        </div>
+        
+        <div class="space-y-5">
+            <div>
+                <input id="email" type="email" placeholder="Email" 
+                       class="w-full bg-slate-950/50 border border-slate-700/50 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-500">
+            </div>
+            
+            <div>
+                <input id="password" type="password" placeholder="Contraseña" 
+                       class="w-full bg-slate-950/50 border border-slate-700/50 p-4 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-500">
+            </div>
+
+            <button id="btn-principal" onclick="authAccion()" 
+                    class="w-full bg-gradient-to-r from-indigo-700 to-blue-800 hover:from-indigo-600 hover:to-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-900/40 transition-all active:scale-95 mt-4">
+                Entrar
+            </button>
+            
+            <div id="mensaje" class="text-center text-sm mt-4 p-3 rounded-xl hidden"></div>
+
+            <div class="pt-6 border-t border-slate-700/50 text-center">
+                <button id="btn-switch" onclick="switchModo()" class="text-blue-400 hover:text-indigo-300 text-sm font-medium transition-colors">
+                    ¿No tienes cuenta? Regístrate aquí
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let esModoLogin = true;
+
+        function switchModo() {
+            esModoLogin = !esModoLogin;
+            const titulo = document.getElementById('titulo');
+            const subtitulo = document.getElementById('subtitulo');
+            const btnPrincipal = document.getElementById('btn-principal');
+            const btnSwitch = document.getElementById('btn-switch');
+            const mensajeDiv = document.getElementById('mensaje');
+
+            mensajeDiv.classList.add('hidden');
+            
+            if (esModoLogin) {
+                titulo.innerText = "¡Hola de nuevo!";
+                subtitulo.innerText = "Ingresa a tu cuenta";
+                btnPrincipal.innerText = "Entrar";
+                btnSwitch.innerText = "¿No tienes cuenta? Regístrate aquí";
+            } else {
+                titulo.innerText = "Crear Cuenta";
+                subtitulo.innerText = "Únete a la plataforma";
+                btnPrincipal.innerText = "Registrarme";
+                btnSwitch.innerText = "¿Ya tienes cuenta? Inicia sesión";
+            }
+        }
+
+        async function authAccion() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const mensajeDiv = document.getElementById('mensaje');
+            const usernameAuto = email.split('@')[0];
+            const endpoint = esModoLogin ? '/auth/login' : '/auth/register';
+            
+            mensajeDiv.innerText = "Procesando...";
+            mensajeDiv.className = "text-center text-sm mt-4 p-3 rounded-xl bg-indigo-500/10 text-indigo-300 block";
+
+            try {
+                const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, username: usernameAuto })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (esModoLogin) {
+                        localStorage.setItem('token', data.access_token);
+                        mensajeDiv.innerText = "✅ ¡Acceso concedido!";
+                        mensajeDiv.className = "text-center text-sm mt-4 p-3 rounded-xl bg-green-500/20 text-green-400 block border border-green-500/30";
+                    } else {
+                        mensajeDiv.innerText = "✅ Cuenta creada con éxito";
+                        mensajeDiv.className = "text-center text-sm mt-4 p-3 rounded-xl bg-blue-500/20 text-blue-400 block border border-blue-500/30";
+                        setTimeout(switchModo, 2000);
+                    }
+                } else {
+                    let errorMsg = data.detail && Array.isArray(data.detail) ? data.detail[0].msg : (data.error || "Error en la operación");
+                    mensajeDiv.innerText = "❌ " + errorMsg;
+                    mensajeDiv.className = "text-center text-sm mt-4 p-3 rounded-xl bg-red-500/20 text-red-400 block border border-red-500/30";
+                }
+            } catch (error) {
+                mensajeDiv.innerText = "📡 Servidor fuera de línea";
+                mensajeDiv.className = "text-center text-sm mt-4 p-3 rounded-xl bg-orange-500/20 text-orange-400 block border border-orange-500/30";
+            }
+        }
+    </script>
+</body>
+</html>
